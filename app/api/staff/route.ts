@@ -1,0 +1,2 @@
+import {NextResponse} from "next/server";import {getUser} from "../../../lib/auth";import {db} from "../../../lib/prisma";
+export async function GET(){const u=await getUser();if(!u||!["OWNER","MANAGER"].includes(u.role))return NextResponse.json({error:"Forbidden"},{status:403});return NextResponse.json(await db.user.findMany({where:{role:"STAFF",active:true},select:{id:true,name:true,email:true},orderBy:{name:"asc"}}))}
