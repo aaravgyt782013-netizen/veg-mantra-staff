@@ -1,0 +1,2 @@
+import {NextResponse} from "next/server";import {getUser} from "../../../../lib/auth";import {db} from "../../../../lib/prisma";
+export async function GET(){const u=await getUser();if(u?.role!=="OWNER")return NextResponse.json({error:"Forbidden"},{status:403});return NextResponse.json(await db.auditLog.findMany({include:{actor:{select:{name:true,email:true,role:true}}},orderBy:{createdAt:"desc"},take:300}))}
