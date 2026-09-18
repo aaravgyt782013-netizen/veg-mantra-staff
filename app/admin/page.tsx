@@ -1,0 +1,2 @@
+import {redirect} from "next/navigation";import {getUser} from "../../lib/auth";import AdminClient from "./ui";
+export default async function Admin(){const u=await getUser();if(u?.role!=="OWNER")redirect("/login");return <AdminClient/>}
