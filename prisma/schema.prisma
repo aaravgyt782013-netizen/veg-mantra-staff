@@ -1,47 +1,7 @@
 generator client { provider = "prisma-client-js" }
 datasource db { provider = "postgresql" url = env("DATABASE_URL") }
-
 enum Role { OWNER MANAGER STAFF }
 enum AttendanceStatus { PRESENT ABSENT LATE LEAVE }
-
-model User {
-  id String @id @default(cuid())
-  name String
-  email String @unique
-  passwordHash String
-  role Role
-  active Boolean @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  attendance Attendance[] @relation("StaffAttendance")
-  markedAttendance Attendance[] @relation("MarkedBy")
-  auditLogs AuditLog[] @relation("Actor")
-}
-
-model Attendance {
-  id String @id @default(cuid())
-  staffId String
-  markedById String
-  date DateTime
-  checkIn DateTime?
-  checkOut DateTime?
-  status AttendanceStatus @default(PRESENT)
-  note String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  staff User @relation("StaffAttendance", fields:[staffId], references:[id])
-  markedBy User @relation("MarkedBy", fields:[markedById], references:[id])
-  @@index([staffId,date])
-}
-
-model AuditLog {
-  id String @id @default(cuid())
-  actorId String?
-  action String
-  targetType String
-  targetId String?
-  details String?
-  createdAt DateTime @default(now())
-  actor User? @relation("Actor", fields:[actorId], references:[id])
-  @@index([createdAt])
-}
+model User { id String @id @default(cuid()) name String email String @unique passwordHash String role Role active Boolean @default(true) createdAt DateTime @default(now()) updatedAt DateTime @updatedAt attendance Attendance[] @relation("StaffAttendance") markedAttendance Attendance[] @relation("MarkedBy") auditLogs AuditLog[] @relation("Actor") }
+model Attendance { id String @id @default(cuid()) staffId String markedById String? date DateTime checkIn DateTime? checkOut DateTime? status AttendanceStatus @default(ABSENT) note String? createdAt DateTime @default(now()) updatedAt DateTime @updatedAt staff User @relation("StaffAttendance",fields:[staffId],references:[id]) markedBy User? @relation("MarkedBy",fields:[markedById],references:[id]) @@unique([staffId,date]) @@index([date]) }
+model AuditLog { id String @id @default(cuid()) actorId String? action String targetType String targetId String? details String? createdAt DateTime @default(now()) actor User? @relation("Actor",fields:[actorId],references:[id]) @@index([createdAt]) }
