@@ -1,2 +1,0 @@
-import {redirect} from "next/navigation";import {getUser} from "../../lib/auth";
-export default async function Staff(){const u=await getUser();if(!u)redirect("/login");return <main className="wrap"><div className="card"><h1>Staff Account</h1><p>Attendance is marked by the manager at the cafe.</p><p className="muted">Signed in as {u.name}</p></div></main>}
