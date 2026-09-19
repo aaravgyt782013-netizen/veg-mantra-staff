@@ -63,16 +63,26 @@ export async function DELETE(req:Request){
   const staff=await db.user.findFirst({where:{staffCode:String(b.staffCode||""),role:"STAFF"}});
   if(!staff) return NextResponse.json({error:"Staff ID not found"},{status:404});
   await db.$transaction(async tx=>{
+    // A removed staff member must disappear completely, including every
+    // attendance row and every audit entry where they were actor/target.
     await tx.auditLog.deleteMany({
       where:{
         OR:[
+          {actorId:staff.id},
           {targetId:staff.id},
           {details:{contains:staff.id}},
           {details:{contains:staff.staffCode}}
         ]
       }
     });
-    await tx.attendance.deleteMany({where:{staffId:staff.id}});
+    await tx.attendance.deleteMany({
+      where:{
+        OR:[
+          {staffId:staff.id},
+          {markedById:staff.id}
+        ]
+      }
+    });
     await tx.user.delete({where:{id:staff.id}});
   });
   return NextResponse.json({ok:true});
