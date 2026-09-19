@@ -28,8 +28,13 @@ export async function DELETE(req:Request){
   if(u?.role!=="OWNER")return NextResponse.json({error:"Forbidden"},{status:403});
   const b=await req.json(),target=await db.user.findUnique({where:{id:String(b.id||"")}});
   if(!target||target.role!=="MANAGER")return NextResponse.json({error:"Manager not found"},{status:404});
-  await db.user.update({where:{id:target.id},data:{active:false}});
-  await db.auditLog.create({data:{actorId:u.id,action:"manager_removed",targetType:"User",targetId:target.id,details:JSON.stringify({email:target.email,name:target.name})}});
+
+  // Release the email on removal so the same email can be registered again.
+  // Keep the manager row itself as an inactive historical record so old
+  // attendance/audit references remain intact.
+  const releasedEmail=target.email;
+  await db.user.update({where:{id:target.id},data:{active:false,email:null}});
+  await db.auditLog.create({data:{actorId:u.id,action:"manager_removed",targetType:"User",targetId:target.id,details:JSON.stringify({email:releasedEmail,name:target.name})}});
   return NextResponse.json({ok:true});
 }
 export async function PATCH(req:Request){
