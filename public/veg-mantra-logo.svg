@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600">
+<rect width="600" height="600" rx="120" fill="#fffdf7"/>
+<path d="M300 45c45 42 130 30 184 77 52 45 38 120 58 177 20 57 71 109 35 172-36 62-111 54-166 77-55 23-103 72-162 44-58-27-62-102-105-143-43-42-112-59-118-126-6-67 54-104 83-158 29-54 45-122 106-144 61-22 121 20 145 24z" fill="#087d4f"/>
+<g fill="none" stroke="#e9f5e9" stroke-width="8" stroke-linecap="round">
+<path d="M145 150l35 28M455 150l-35 28M130 315l-40 0M470 315l40 0M180 470l-28 35M420 470l28 35"/>
+</g>
+<text x="300" y="205" text-anchor="middle" fill="#fff" font-family="Arial,sans-serif" font-size="30" font-weight="700">VEG</text>
+<path d="M165 230h270" stroke="#fff" stroke-width="4"/>
+<text x="300" y="310" text-anchor="middle" fill="#fff" font-family="Georgia,serif" font-size="70">Mantra</text>
+<path d="M165 340h270" stroke="#fff" stroke-width="4"/>
+<text x="300" y="395" text-anchor="middle" fill="#fff" font-family="Arial,sans-serif" font-size="29">Take Away</text>
+<path d="M276 115c10-28 37-34 53-10 12 18 2 36-21 40" fill="none" stroke="#dff3dc" stroke-width="8" stroke-linecap="round"/>
+<text x="300" y="545" text-anchor="middle" fill="#087d4f" font-family="Arial,sans-serif" font-size="18" font-weight="700" letter-spacing="4">MOHAN NAGAR</text>
+</svg>
