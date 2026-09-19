@@ -6,7 +6,7 @@ export function getClientIp(req:Request){
   return (forwarded?.split(",")[0] || req.headers.get("x-real-ip") || "").trim();
 }
 export function cafeNetworkAllowed(req:Request){
-  const allowed=(process.env.ALLOWED_CAFE_IPS||"").split(",").map(x=>x.trim()).filter(Boolean);
+  const allowed=(process.env.ALLOWED_CAFE_IPS||"139.5.251.36").split(",").map(x=>x.trim()).filter(Boolean);
   if(!allowed.length) return false;
   return allowed.includes(getClientIp(req));
 }
