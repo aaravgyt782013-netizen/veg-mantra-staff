@@ -15,14 +15,14 @@ export async function GET(){
   const start=istDayStart(),end=new Date(start.getTime()+86400000);
   const active=await db.user.findMany({where:{role:"STAFF",active:true},select:{id:true,staffCode:true,name:true,age:true,gender:true,photoData:true}});
   const ids=new Set(rows.filter(r=>r.date>=start&&r.date<end).map(r=>r.staffId));
-  const virtualAbsent=active.filter(s=>!ids.has(s.id)).map(s=>({id:`absent-${s.id}-${start.getTime()}`,staffId:s.id,date:start,checkIn:null,checkOut:null,status:"ABSENT",note:null,markedBy:null,staff:s,virtual:true}));
+  const virtualAbsent=active.filter(s=>!ids.has(s.id)).map(s=>({id:`absent-${s.id}-${start.getTime()}`,staffId:s.id,date:start,checkIn:null,checkOut:null,lunchStart:null,lunchSeconds:0,status:"ABSENT",note:null,markedBy:null,staff:s,virtual:true}));
   return NextResponse.json([...virtualAbsent,...rows]);
 }
 export async function POST(req:Request){
   const u=await getUser();if(!u||!["OWNER","MANAGER"].includes(u.role))return NextResponse.json({error:"Forbidden"},{status:403});
   if(u.role==="MANAGER"&&!cafeNetworkAllowed(req))return NextResponse.json({error:"Cafe network required"},{status:403});
   const body=await req.json(),staffId=String(body.staffId||""),action=String(body.action||""),reason=String(body.reason||"").trim();
-  if(!staffId||!["checkin","checkout","absent"].includes(action))return NextResponse.json({error:"Invalid attendance request"},{status:400});
+  if(!staffId||!["checkin","checkout","absent","lunch"].includes(action))return NextResponse.json({error:"Invalid attendance request"},{status:400});
   if(action==="absent"&&!reason)return NextResponse.json({error:"A reason is required when marking absent."},{status:400});
   const staff=await db.user.findFirst({where:{id:staffId,role:"STAFF",active:true}});if(!staff)return NextResponse.json({error:"Active staff member not found"},{status:404});
   const now=new Date(),start=istDayStart(now),end=new Date(start.getTime()+86400000);
