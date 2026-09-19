@@ -105,6 +105,8 @@ export default function ManagerClient() {
         {message && <div className="notice">{message}</div>}
 
         <div className="card searchCard">
+          <h2>Current Staff</h2>
+          <p className="muted">All active staff members are shown below, with the same staff information available in the Owner panel.</p>
           <input
             placeholder="Search Staff ID or name…"
             value={search}
@@ -112,7 +114,9 @@ export default function ManagerClient() {
           />
         </div>
 
-        {filtered.map((person) => {
+        {filtered.length === 0 ? (
+          <div className="card"><p className="muted">No current staff members found.</p></div>
+        ) : filtered.map((person) => {
           const today = rows.find(
             (row) =>
               row.staffId === person.id &&
