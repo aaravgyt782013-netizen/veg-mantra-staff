@@ -1,11 +1,223 @@
 "use client";
-import{useEffect,useState}from"react";
-export default function ManagerClient(){
- const[staff,setStaff]=useState<any[]>([]),[rows,setRows]=useState<any[]>([]),[msg,setMsg]=useState(""),[search,setSearch]=useState(""),[absent,setAbsent]=useState<any>(null),[reason,setReason]=useState("");
- async function load(){const[u,a]=await Promise.all([fetch("/api/staff"),fetch("/api/attendance")]);setStaff(await u.json());setRows(await a.json())}useEffect(()=>{load()},[]);
- async function mark(staffId:string,action:string,r=""){setMsg("");const res=await fetch("/api/attendance",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({staffId,action,reason:r})});const j=await res.json();setMsg(res.ok?"Attendance saved successfully.":j.error||"Attendance failed");if(res.ok){setAbsent(null);setReason("")}load()}
- const todayLabel=new Date().toLocaleDateString("en-IN",{timeZone:"Asia/Kolkata"});
- const filtered=staff.filter(s=>(s.name+" "+s.staffCode).toLowerCase().includes(search.toLowerCase()));
- return <><header className="top"><div className="brand">VEG MANTRA<small>MOHAN NAGAR • MANAGER ATTENDANCE</small></div><button className="nav" onClick={async()=>{await fetch("/api/auth/logout",{method:"POST"});location.href="/login"}}>Logout</button></header><main className="wrap"><div className="hero"><div><span className="eyebrow">TODAY • IST</span><h1>Staff Attendance</h1><p className="muted">Search by name or Staff ID and record today's attendance.</p></div></div>{msg&&<div className="notice">{msg}</div>}<div className="card searchCard"><input placeholder="Search Staff ID or name…" value={search} onChange={e=>setSearch(e.target.value)}/></div>{filtered.map(s=>{const today=rows.find(r=>r.staffId===s.id&&new Date(r.date).toLocaleDateString("en-IN",{timeZone:"Asia/Kolkata"})===todayLabel);const recorded=!!today&&!today.virtual;return <div className="card staffCard" key={s.id}><div className="personInfo">{s.photoData&&<img src={s.photoData} alt=""/>}<div><span className="staffId">{s.staffCode}</span><h3>{s.name}</h3><div className="muted">Age {s.age} • {s.gender}</div></div></div><div className="actions attendanceActions"><button className="btn" disabled={recorded||!!today?.checkIn} onClick={()=>mark(s.id,"checkin")}>Check In</button><button className="btn secondary" disabled={!today?.checkIn||!!today?.checkOut} onClick={()=>mark(s.id,"checkout")}>Check Out</button><button className="btn danger" disabled={recorded} onClick={()=>{setAbsent(s);setReason("")}}>Mark Absent</button></div><div className="attendanceState">{today?.status==="ABSENT"&&recorded?<><b>Absent</b>{today.note&&<span>Reason: {today.note}</span></>:today?.checkIn?<span>Checked in {new Date(today.checkIn).toLocaleTimeString("en-IN",{timeZone:"Asia/Kolkata"})}{today.checkOut?" • Checked out "+new Date(today.checkOut).toLocaleTimeString("en-IN",{timeZone:"Asia/Kolkata"}):" • Not checked out"}</span>:<span>Not recorded</span>}</div></div>})}
- {absent&&<div className="modalBackdrop"><div className="modal card"><h2>Mark {absent.name} absent</h2><p className="muted">{absent.staffCode} • A reason is required and will be recorded in the Owner audit/attendance panel.</p><textarea value={reason} onChange={e=>setReason(e.target.value)} placeholder="Enter reason for absence…" rows={4}/><div className="actions"><button className="btn secondary" onClick={()=>setAbsent(null)}>Cancel</button><button className="btn danger" disabled={!reason.trim()} onClick={()=>mark(absent.id,"absent",reason.trim())}>Confirm Absent</button></div></div></div>}
- </main></>}
+
+import { useEffect, useState } from "react";
+
+type Staff = {
+  id: string;
+  staffCode: string;
+  name: string;
+  age?: number | null;
+  gender?: string | null;
+  photoData?: string | null;
+};
+
+type AttendanceRow = {
+  id: string;
+  staffId: string;
+  date: string;
+  checkIn?: string | null;
+  checkOut?: string | null;
+  status?: string;
+  note?: string | null;
+  virtual?: boolean;
+};
+
+export default function ManagerClient() {
+  const [staff, setStaff] = useState<Staff[]>([]);
+  const [rows, setRows] = useState<AttendanceRow[]>([]);
+  const [message, setMessage] = useState("");
+  const [search, setSearch] = useState("");
+  const [absentStaff, setAbsentStaff] = useState<Staff | null>(null);
+  const [reason, setReason] = useState("");
+
+  async function load() {
+    try {
+      const [staffRes, attendanceRes] = await Promise.all([
+        fetch("/api/staff", { cache: "no-store" }),
+        fetch("/api/attendance", { cache: "no-store" }),
+      ]);
+      const staffJson = await staffRes.json();
+      const attendanceJson = await attendanceRes.json();
+      setStaff(Array.isArray(staffJson) ? staffJson : []);
+      setRows(Array.isArray(attendanceJson) ? attendanceJson : []);
+    } catch {
+      setMessage("Unable to load attendance. Please try again.");
+    }
+  }
+
+  useEffect(() => {
+    void load();
+  }, []);
+
+  async function mark(staffId: string, action: "checkin" | "checkout" | "absent", absenceReason = "") {
+    setMessage("");
+    try {
+      const res = await fetch("/api/attendance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ staffId, action, reason: absenceReason }),
+      });
+      const json = await res.json();
+      setMessage(res.ok ? "Attendance saved successfully." : json.error || "Attendance failed.");
+      if (res.ok) {
+        setAbsentStaff(null);
+        setReason("");
+      }
+      await load();
+    } catch {
+      setMessage("Unable to save attendance. Please try again.");
+    }
+  }
+
+  const todayLabel = new Date().toLocaleDateString("en-IN", {
+    timeZone: "Asia/Kolkata",
+  });
+
+  const filtered = staff.filter((person) =>
+    (person.name + " " + person.staffCode).toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <>
+      <header className="top">
+        <div className="brand">
+          VEG MANTRA
+          <small>MOHAN NAGAR • MANAGER ATTENDANCE</small>
+        </div>
+        <button
+          className="nav"
+          onClick={async () => {
+            await fetch("/api/auth/logout", { method: "POST" });
+            window.location.href = "/login";
+          }}
+        >
+          Logout
+        </button>
+      </header>
+
+      <main className="wrap">
+        <div className="hero">
+          <span className="eyebrow">TODAY • IST</span>
+          <h1>Staff Attendance</h1>
+          <p className="muted">Search by name or Staff ID and record today's attendance.</p>
+        </div>
+
+        {message && <div className="notice">{message}</div>}
+
+        <div className="card searchCard">
+          <input
+            placeholder="Search Staff ID or name…"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+          />
+        </div>
+
+        {filtered.map((person) => {
+          const today = rows.find(
+            (row) =>
+              row.staffId === person.id &&
+              new Date(row.date).toLocaleDateString("en-IN", {
+                timeZone: "Asia/Kolkata",
+              }) === todayLabel
+          );
+          const recorded = Boolean(today && !today.virtual);
+
+          return (
+            <div className="card staffCard" key={person.id}>
+              <div className="personInfo">
+                {person.photoData && <img src={person.photoData} alt="" />}
+                <div>
+                  <span className="staffId">{person.staffCode}</span>
+                  <h3>{person.name}</h3>
+                  <div className="muted">
+                    Age {person.age ?? "—"} • {person.gender ?? "—"}
+                  </div>
+                </div>
+              </div>
+
+              <div className="actions attendanceActions">
+                <button
+                  className="btn"
+                  disabled={recorded || Boolean(today?.checkIn)}
+                  onClick={() => void mark(person.id, "checkin")}
+                >
+                  Check In
+                </button>
+                <button
+                  className="btn secondary"
+                  disabled={!today?.checkIn || Boolean(today?.checkOut)}
+                  onClick={() => void mark(person.id, "checkout")}
+                >
+                  Check Out
+                </button>
+                <button
+                  className="btn danger"
+                  disabled={recorded}
+                  onClick={() => {
+                    setAbsentStaff(person);
+                    setReason("");
+                  }}
+                >
+                  Mark Absent
+                </button>
+              </div>
+
+              <div className="attendanceState">
+                {today?.status === "ABSENT" && recorded ? (
+                  <>
+                    <b>Absent</b>
+                    {today.note && <span>Reason: {today.note}</span>}
+                  </>
+                ) : today?.checkIn ? (
+                  <span>
+                    Checked in{" "}
+                    {new Date(today.checkIn).toLocaleTimeString("en-IN", {
+                      timeZone: "Asia/Kolkata",
+                    })}
+                    {today.checkOut
+                      ? " • Checked out " +
+                        new Date(today.checkOut).toLocaleTimeString("en-IN", {
+                          timeZone: "Asia/Kolkata",
+                        })
+                      : " • Not checked out"}
+                  </span>
+                ) : (
+                  <span>Not recorded</span>
+                )}
+              </div>
+            </div>
+          );
+        })}
+
+        {absentStaff && (
+          <div className="modalBackdrop">
+            <div className="modal card">
+              <h2>Mark {absentStaff.name} absent</h2>
+              <p className="muted">
+                {absentStaff.staffCode} • A reason is required and will be recorded in the Owner audit/attendance panel.
+              </p>
+              <textarea
+                value={reason}
+                onChange={(event) => setReason(event.target.value)}
+                placeholder="Enter reason for absence…"
+                rows={4}
+              />
+              <div className="actions">
+                <button className="btn secondary" onClick={() => setAbsentStaff(null)}>
+                  Cancel
+                </button>
+                <button
+                  className="btn danger"
+                  disabled={!reason.trim()}
+                  onClick={() => void mark(absentStaff.id, "absent", reason.trim())}
+                >
+                  Confirm Absent
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </main>
+    </>
+  );
+}
