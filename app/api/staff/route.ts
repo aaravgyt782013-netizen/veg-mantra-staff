@@ -2,6 +2,7 @@ import {NextResponse} from "next/server";
 import bcrypt from "bcryptjs";
 import {getUser} from "../../../lib/auth";
 import {db} from "../../../lib/prisma";
+export const dynamic = "force-dynamic";
 
 function owner(req:Request){return getUser().then(u=>u?.role==="OWNER"?u:null)}
 
@@ -84,7 +85,7 @@ export async function DELETE(req:Request){
         ]
       }
     });
-    await tx.user.delete({where:{id:staff.id}});
+    // Hard-delete the staff account only after all dependent data is gone.\n    await tx.user.delete({where:{id:staff.id}});
   });
   return NextResponse.json({ok:true});
 }
