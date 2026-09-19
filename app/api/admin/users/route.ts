@@ -17,9 +17,20 @@ export async function POST(req:Request){
     if(!email||!email.includes("@")||!name||!password||password.length<6||!Number.isInteger(age)||age<18||age>100||!gender)
       return NextResponse.json({error:"Name, valid email, age (18+), gender and a password of at least 6 characters are required."},{status:400});
     const existing=await db.user.findUnique({where:{email}});
-    if(existing)return NextResponse.json({error:"That email is already registered. One email can only have one account."},{status:409});
-    const user=await db.user.create({data:{name,email,age,gender,passwordHash:await bcrypt.hash(password,12),role:"MANAGER",active:true}});
-    await db.auditLog.create({data:{actorId:u.id,action:"manager_created",targetType:"User",targetId:user.id,details:JSON.stringify({email,age,gender})}});
+    const passwordHash=await bcrypt.hash(password,12);
+    let user;
+    if(existing){
+      // A manager removed before the email-release fix may still have the
+      // old email stored on its inactive historical row. Reuse that row so
+      // the email can be registered again without losing history.
+      if(existing.role!=="MANAGER" || existing.active)
+        return NextResponse.json({error:"That email is already registered. One email can only have one account."},{status:409});
+      user=await db.user.update({where:{id:existing.id},data:{name,email,age,gender,passwordHash,active:true}});
+      await db.auditLog.create({data:{actorId:u.id,action:"manager_recreated",targetType:"User",targetId:user.id,details:JSON.stringify({email,age,gender})}});
+    }else{
+      user=await db.user.create({data:{name,email,age,gender,passwordHash,role:"MANAGER",active:true}});
+      await db.auditLog.create({data:{actorId:u.id,action:"manager_created",targetType:"User",targetId:user.id,details:JSON.stringify({email,age,gender})}});
+    }
     return NextResponse.json({ok:true,id:user.id});
   }catch(error){console.error(error);return NextResponse.json({error:"Could not create manager. Please try again."},{status:500});}
 }
