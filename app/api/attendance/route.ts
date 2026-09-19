@@ -29,13 +29,18 @@ export async function POST(req:Request){
   let row=await db.attendance.findFirst({where:{staffId,date:{gte:start,lt:end}}});
   if(row&&(row.checkIn||row.checkOut)&&action==="absent")return NextResponse.json({error:"Attendance is already recorded for today."},{status:400});
   if(action==="absent"){
-    if(row) row=await db.attendance.update({where:{id:row.id},data:{status:"ABSENT",note:reason,markedById:u.id,checkIn:null,checkOut:null}});
+    if(row) row=await db.attendance.update({where:{id:row.id},data:{status:"ABSENT",note:reason,markedById:u.id,checkIn:null,checkOut:null,lunchStart:null,lunchSeconds:0}});
     else row=await db.attendance.create({data:{staffId,markedById:u.id,date:start,status:"ABSENT",note:reason}});
   }else if(action==="checkin"){
     if(row?.checkIn)return NextResponse.json({error:"Already checked in today"},{status:400});
     row=row?await db.attendance.update({where:{id:row.id},data:{checkIn:now,markedById:u.id,status:"PRESENT",note:null}}):await db.attendance.create({data:{staffId,markedById:u.id,date:start,checkIn:now,status:"PRESENT"}});
+  }else if(action==="lunch"){
+    if(!row?.checkIn)return NextResponse.json({error:"Check-in is required before lunch."},{status:400});
+    if(row.checkOut)return NextResponse.json({error:"Shift is already checked out."},{status:400});
+    if(row.lunchStart){const seconds=Math.max(0,Math.floor((now.getTime()-row.lunchStart.getTime())/1000));row=await db.attendance.update({where:{id:row.id},data:{lunchStart:null,lunchSeconds:{increment:seconds},markedById:u.id}})}else{row=await db.attendance.update({where:{id:row.id},data:{lunchStart:now,markedById:u.id}})}
   }else{
     if(!row?.checkIn)return NextResponse.json({error:"Check-in is required before check-out"},{status:400});
+    if(row.lunchStart)return NextResponse.json({error:"End lunch before checking out."},{status:400});
     if(row.checkOut)return NextResponse.json({error:"Already checked out today"},{status:400});
     row=await db.attendance.update({where:{id:row.id},data:{checkOut:now,markedById:u.id}});
   }
