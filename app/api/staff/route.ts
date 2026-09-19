@@ -72,7 +72,7 @@ export async function DELETE(req:Request){
           {actorId:staff.id},
           {targetId:staff.id},
           {details:{contains:staff.id}},
-          {details:{contains:staff.staffCode}},
+          {details:{contains:staff.staffCode||""}},
           {details:{contains:staff.name}}
         ]
       }
