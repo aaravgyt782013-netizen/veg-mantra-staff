@@ -11,7 +11,7 @@ function istDayStart(now=new Date()){
 }
 export async function GET(){
   const u=await getUser();if(!u||!["OWNER","MANAGER"].includes(u.role))return NextResponse.json({error:"Forbidden"},{status:403});
-  const rows=await db.attendance.findMany({include:{staff:true,markedBy:true},orderBy:{date:"desc"},take:500});
+  const rows=await db.attendance.findMany({where:{staff:{role:"STAFF",active:true}},include:{staff:true,markedBy:true},orderBy:{date:"desc"},take:500});
   const start=istDayStart(),end=new Date(start.getTime()+86400000);
   const active=await db.user.findMany({where:{role:"STAFF",active:true},select:{id:true,staffCode:true,name:true,age:true,gender:true,photoData:true}});
   const ids=new Set(rows.filter(r=>r.date>=start&&r.date<end).map(r=>r.staffId));
