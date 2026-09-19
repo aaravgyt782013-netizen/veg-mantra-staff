@@ -117,13 +117,16 @@ export default function ManagerClient() {
         {filtered.length === 0 ? (
           <div className="card"><p className="muted">No current staff members found.</p></div>
         ) : filtered.map((person) => {
-          const today = rows.find(
+          // Prefer a real attendance row over the virtual "absent" placeholder.
+          // This keeps the Check Out action visible immediately after Check In.
+          const todayRows = rows.filter(
             (row) =>
               row.staffId === person.id &&
               new Date(row.date).toLocaleDateString("en-IN", {
                 timeZone: "Asia/Kolkata",
               }) === todayLabel
           );
+          const today = todayRows.find((row) => !row.virtual) ?? todayRows[0];
           const recorded = Boolean(today && !today.virtual);
 
           return (
