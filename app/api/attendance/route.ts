@@ -3,6 +3,7 @@ import {db} from "../../../lib/prisma";
 import {getUser} from "../../../lib/auth";
 import {cafeNetworkAllowed} from "../../../lib/network";
 import {notifyManager} from "../../../lib/email";
+export const dynamic = "force-dynamic";
 
 function istDayStart(now=new Date()){
   const parts=new Intl.DateTimeFormat("en-US",{timeZone:"Asia/Kolkata",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(now);
@@ -16,7 +17,7 @@ export async function GET(){
   const active=await db.user.findMany({where:{role:"STAFF",active:true},select:{id:true,staffCode:true,name:true,age:true,gender:true,photoData:true}});
   const ids=new Set(rows.filter(r=>r.date>=start&&r.date<end).map(r=>r.staffId));
   const virtualAbsent=active.filter(s=>!ids.has(s.id)).map(s=>({id:`absent-${s.id}-${start.getTime()}`,staffId:s.id,date:start,checkIn:null,checkOut:null,lunchStart:null,lunchSeconds:0,status:"ABSENT",note:null,markedBy:null,staff:s,virtual:true}));
-  return NextResponse.json([...virtualAbsent,...rows]);
+  return NextResponse.json([...virtualAbsent,...rows],{headers:{"Cache-Control":"no-store, no-cache, must-revalidate"}});
 }
 export async function POST(req:Request){
   const u=await getUser();if(!u||!["OWNER","MANAGER"].includes(u.role))return NextResponse.json({error:"Forbidden"},{status:403});
