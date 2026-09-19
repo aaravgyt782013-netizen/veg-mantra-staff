@@ -44,7 +44,7 @@ model Attendance {
   markedById String?
   date       DateTime
   checkIn   DateTime?
-  checkOut  DateTime?
+  checkOut  DateTime?\n  lunchStart DateTime?\n  lunchSeconds Int @default(0)
   status     AttendanceStatus @default(ABSENT)
   note       String?
   createdAt  DateTime         @default(now())
