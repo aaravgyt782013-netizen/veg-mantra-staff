@@ -62,7 +62,18 @@ export async function DELETE(req:Request){
   const b=await req.json();
   const staff=await db.user.findFirst({where:{staffCode:String(b.staffCode||""),role:"STAFF"}});
   if(!staff) return NextResponse.json({error:"Staff ID not found"},{status:404});
-  await db.user.update({where:{id:staff.id},data:{active:false}});
-  await db.auditLog.create({data:{actorId:u.id,action:"staff_removed",targetType:"User",targetId:staff.id,details:JSON.stringify({staffCode:staff.staffCode,name:staff.name})}});
+  await db.$transaction(async tx=>{
+    await tx.auditLog.deleteMany({
+      where:{
+        OR:[
+          {targetId:staff.id},
+          {details:{contains:staff.id}},
+          {details:{contains:staff.staffCode}}
+        ]
+      }
+    });
+    await tx.attendance.deleteMany({where:{staffId:staff.id}});
+    await tx.user.delete({where:{id:staff.id}});
+  });
   return NextResponse.json({ok:true});
 }
