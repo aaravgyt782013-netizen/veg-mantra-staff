@@ -140,30 +140,39 @@ export default function ManagerClient() {
               </div>
 
               <div className="actions attendanceActions">
-                <button
-                  className="btn"
-                  disabled={recorded || Boolean(today?.checkIn)}
-                  onClick={() => void mark(person.id, "checkin")}
-                >
-                  Check In
-                </button>
-                <button
-                  className="btn secondary"
-                  disabled={!today?.checkIn || Boolean(today?.checkOut)}
-                  onClick={() => void mark(person.id, "checkout")}
-                >
-                  Check Out
-                </button>
-                <button
-                  className="btn danger"
-                  disabled={recorded}
-                  onClick={() => {
-                    setAbsentStaff(person);
-                    setReason("");
-                  }}
-                >
-                  Mark Absent
-                </button>
+                {!recorded && !today?.checkIn && (
+                  <>
+                    <button
+                      className="btn quickAction"
+                      onClick={() => void mark(person.id, "checkin")}
+                    >
+                      ✓ Check In
+                    </button>
+                    <button
+                      className="btn danger quickAction"
+                      onClick={() => {
+                        setAbsentStaff(person);
+                        setReason("");
+                      }}
+                    >
+                      Mark Absent
+                    </button>
+                  </>
+                )}
+                {!recorded && today?.checkIn && !today?.checkOut && (
+                  <button
+                    className="btn quickAction checkoutAction"
+                    onClick={() => void mark(person.id, "checkout")}
+                  >
+                    ✓ Check Out
+                  </button>
+                )}
+                {today?.checkOut && (
+                  <span className="attendanceComplete">✓ Attendance complete</span>
+                )}
+                {today?.status === "ABSENT" && recorded && (
+                  <span className="attendanceComplete">✓ Marked absent</span>
+                )}
               </div>
 
               <div className="attendanceState">
