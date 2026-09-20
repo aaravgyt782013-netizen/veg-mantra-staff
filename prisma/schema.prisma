@@ -36,6 +36,70 @@ model User {
   attendance       Attendance[] @relation("StaffAttendance")
   markedAttendance Attendance[] @relation("MarkedBy")
   auditLogs        AuditLog[]   @relation("Actor")
+  fingerprintEnrollments FingerprintEnrollment[]
+  fingerprintRequests FingerprintEnrollmentRequest[] @relation("EnrollmentRequestedBy")
+}
+
+model BiometricDevice {
+  id           String   @id
+  name         String
+  model        String?
+  serialNumber String?
+  connectionType String?
+  host         String?
+  port         Int?
+  enabled      Boolean  @default(true)
+  lastSeenAt   DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  enrollments  FingerprintEnrollment[]
+  requests     FingerprintEnrollmentRequest[]
+  commands     BiometricCommand[]
+}
+
+model FingerprintEnrollment {
+  id           String   @id @default(cuid())
+  staffId      String
+  deviceId     String
+  deviceUserId String
+  fingerLabel  String?
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  staff        User @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  device       BiometricDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  @@unique([deviceId, deviceUserId])
+  @@index([staffId])
+}
+
+model FingerprintEnrollmentRequest {
+  id            String   @id @default(cuid())
+  staffId       String
+  requestedById String
+  deviceId      String
+  fingerLabel   String?
+  status        String   @default("PENDING")
+  createdAt     DateTime @default(now())
+  expiresAt     DateTime?
+  completedAt   DateTime?
+  staff         User @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  requestedBy   User @relation("EnrollmentRequestedBy", fields: [requestedById], references: [id])
+  device        BiometricDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  @@index([status])
+}
+
+model BiometricCommand {
+  id           String   @id @default(cuid())
+  deviceId     String
+  type         String
+  deviceUserId String?
+  staffCode    String?
+  status       String   @default("PENDING")
+  createdAt    DateTime @default(now())
+  completedAt  DateTime?
+  details      String?
+  device       BiometricDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  @@index([status, createdAt])
 }
 
 model Attendance {
