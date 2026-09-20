@@ -64,6 +64,21 @@ export async function DELETE(req:Request){
   const staff=await db.user.findFirst({where:{staffCode:String(b.staffCode||""),role:"STAFF"}});
   if(!staff) return NextResponse.json({error:"Staff ID not found"},{status:404});
   await db.$transaction(async tx=>{
+    // Queue deletion on the biometric station before the staff record is
+    // hard-deleted. The local gateway will remove the device enrollment.
+    const fingerprintEnrollments=await tx.fingerprintEnrollment.findMany({where:{staffId:staff.id,active:true}});
+    for(const enrollment of fingerprintEnrollments){
+      await tx.biometricCommand.create({
+        data:{
+          deviceId:enrollment.deviceId,
+          type:"DELETE_ENROLLMENT",
+          deviceUserId:enrollment.deviceUserId,
+          staffCode:staff.staffCode,
+          status:"PENDING",
+          details:JSON.stringify({staffId:staff.id,enrollmentId:enrollment.id,reason:"staff_deleted"})
+        }
+      });
+    }
     // A removed staff member must disappear completely, including every
     // attendance row and every audit entry where they were actor/target.
     await tx.auditLog.deleteMany({
