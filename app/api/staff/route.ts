@@ -64,34 +64,29 @@ export async function DELETE(req:Request){
   const staff=await db.user.findFirst({where:{staffCode:String(b.staffCode||""),role:"STAFF"}});
   if(!staff) return NextResponse.json({error:"Staff ID not found"},{status:404});
   await db.$transaction(async tx=>{
-    // Queue deletion on the biometric station before the staff record is
-    // hard-deleted. The local gateway will remove the device enrollment.
-    const fingerprintEnrollments=await tx.fingerprintEnrollment.findMany({where:{staffId:staff.id,active:true}});
-    for(const enrollment of fingerprintEnrollments){
+    // Permanently remove every fingerprint enrollment and queue a device-side
+    // deletion first. The gateway must process the queued command before the
+    // device can reuse that biometric user ID.
+    const enrollments=await tx.fingerprintEnrollment.findMany({
+      where:{staffId:staff.id},
+      select:{id:true,deviceId:true,deviceUserId:true,staffCode:true}
+    });
+    for(const enrollment of enrollments){
       await tx.biometricCommand.create({
         data:{
           deviceId:enrollment.deviceId,
           type:"DELETE_ENROLLMENT",
           deviceUserId:enrollment.deviceUserId,
-          staffCode:staff.staffCode,
+          staffCode:enrollment.staffCode,
           status:"PENDING",
           details:JSON.stringify({staffId:staff.id,enrollmentId:enrollment.id,reason:"staff_deleted"})
         }
       });
     }
-    // A removed staff member must disappear completely, including every
-    // attendance row and every audit entry where they were actor/target.
-    await tx.auditLog.deleteMany({
-      where:{
-        OR:[
-          {actorId:staff.id},
-          {targetId:staff.id},
-          {details:{contains:staff.id}},
-          {details:{contains:staff.staffCode||""}},
-          {details:{contains:staff.name}}
-        ]
-      }
-    });
+    // Remove pending enrollment requests as well.
+    await tx.fingerprintEnrollmentRequest.deleteMany({where:{staffId:staff.id}});
+
+    // Permanently remove all attendance records for this staff member.
     await tx.attendance.deleteMany({
       where:{
         OR:[
@@ -100,7 +95,24 @@ export async function DELETE(req:Request){
         ]
       }
     });
-    // Hard-delete the staff account only after all dependent data is gone.
+
+    // Remove audit records that belong to or explicitly reference this staff
+    // member. This is intentionally hard deletion, as requested.
+    await tx.auditLog.deleteMany({
+      where:{
+        OR:[
+          {actorId:staff.id},
+          {targetId:staff.id},
+          {details:{contains:staff.id}},
+          ...(staff.staffCode ? [{details:{contains:staff.staffCode}}] : []),
+          {details:{contains:staff.name}}
+        ]
+      }
+    });
+
+    // Finally remove the staff user itself and all active fingerprint
+    // enrollment rows. The DB relation cascade handles enrollment rows.
+    await tx.fingerprintEnrollment.deleteMany({where:{staffId:staff.id}});
     await tx.user.delete({where:{id:staff.id}});
   });
   return NextResponse.json({ok:true});
