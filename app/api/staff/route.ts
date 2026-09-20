@@ -18,7 +18,7 @@ export async function GET(){
 
 export async function POST(req:Request){
   const u=await getUser();
-  if(u?.role!=="OWNER") return NextResponse.json({error:"Forbidden"},{status:403});
+  if(!u||!["OWNER","MANAGER"].includes(u.role)) return NextResponse.json({error:"Forbidden"},{status:403});
   try{
     const form=await req.formData();
     const name=String(form.get("name")||"").trim();
@@ -42,7 +42,7 @@ export async function POST(req:Request){
 
 export async function PATCH(req:Request){
   const u=await getUser();
-  if(u?.role!=="OWNER") return NextResponse.json({error:"Forbidden"},{status:403});
+  if(u?.role!=="OWNER"&&u?.role!=="MANAGER") return NextResponse.json({error:"Forbidden"},{status:403});
   const b=await req.json();
   if(!b.staffCode) return NextResponse.json({error:"Staff ID is required"},{status:400});
   const existing=await db.user.findFirst({where:{staffCode:String(b.staffCode),role:"STAFF"}});
@@ -59,7 +59,7 @@ export async function PATCH(req:Request){
 
 export async function DELETE(req:Request){
   const u=await getUser();
-  if(u?.role!=="OWNER") return NextResponse.json({error:"Forbidden"},{status:403});
+  if(u?.role!=="OWNER"&&u?.role!=="MANAGER") return NextResponse.json({error:"Forbidden"},{status:403});
   const b=await req.json();
   const staff=await db.user.findFirst({where:{staffCode:String(b.staffCode||""),role:"STAFF"}});
   if(!staff) return NextResponse.json({error:"Staff ID not found"},{status:404});
