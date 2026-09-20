@@ -1,7 +1,6 @@
 import {NextResponse} from "next/server";
 import {db} from "../../../lib/prisma";
 import {getUser} from "../../../lib/auth";
-import {cafeNetworkAllowed} from "../../../lib/network";
 import {notifyManager} from "../../../lib/email";
 export const dynamic = "force-dynamic";
 
@@ -20,8 +19,7 @@ export async function GET(){
   return NextResponse.json([...virtualAbsent,...rows],{headers:{"Cache-Control":"no-store, no-cache, must-revalidate"}});
 }
 export async function POST(req:Request){
-  const u=await getUser();if(!u||!["OWNER","MANAGER"].includes(u.role))return NextResponse.json({error:"Forbidden"},{status:403});
-  if(u.role==="MANAGER"&&!cafeNetworkAllowed(req))return NextResponse.json({error:"Cafe network required"},{status:403});
+  const u=await getUser();if(u?.role!=="OWNER")return NextResponse.json({error:"Manual attendance is owner-only. Use the fingerprint station for staff attendance."},{status:403});
   const body=await req.json(),staffId=String(body.staffId||""),action=String(body.action||""),reason=String(body.reason||"").trim();
   if(!staffId||!["checkin","checkout","absent","lunch"].includes(action))return NextResponse.json({error:"Invalid attendance request"},{status:400});
   if(action==="absent"&&!reason)return NextResponse.json({error:"A reason is required when marking absent."},{status:400});
