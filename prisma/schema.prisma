@@ -38,6 +38,7 @@ model User {
   auditLogs        AuditLog[]   @relation("Actor")
   fingerprintEnrollments FingerprintEnrollment[]
   fingerprintRequests FingerprintEnrollmentRequest[] @relation("EnrollmentRequestedBy")
+  fingerprintEnrollmentRequestsForStaff FingerprintEnrollmentRequest[] @relation("EnrollmentForStaff")
 }
 
 model BiometricDevice {
@@ -82,7 +83,7 @@ model FingerprintEnrollmentRequest {
   createdAt     DateTime @default(now())
   expiresAt     DateTime?
   completedAt   DateTime?
-  staff         User @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  staff         User @relation("EnrollmentForStaff", fields: [staffId], references: [id], onDelete: Cascade)
   requestedBy   User @relation("EnrollmentRequestedBy", fields: [requestedById], references: [id])
   device        BiometricDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
   @@index([status])
